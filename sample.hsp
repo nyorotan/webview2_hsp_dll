@@ -1,0 +1,128 @@
+// ==============================================================================
+// HSP3 + WebView2 動作サンプル (sample.hsp)
+// ==============================================================================
+// 文字コード: Shift-JIS
+// ==============================================================================
+#packopt name "WebView2_sample"
+#include "hsp3webview2.as"
+
+#define WM_USER_WV2_MSG 0x8001
+
+    screen 0, 960, 640
+    title "HSP3 WebView2 埋め込みサンプル"
+
+    // ツールバー用ボタンの配置
+    objsize 90, 26
+    pos 10, 10 : button gosub "戻る", *cmd_back
+    pos 105, 10 : button gosub "進む", *cmd_forward
+    pos 200, 10 : button gosub "再読込", *cmd_reload
+    pos 295, 10 : button gosub "ローカルHTML", *cmd_local_html
+    pos 390, 10 : button gosub "JS実行", *cmd_run_js
+
+    // WebView2 の配置領域 (上部ツールバー45pxを除いた領域)
+    wv_x = 0
+    wv_y = 45
+    wv_w = ginfo_winx
+    wv_h = ginfo_winy - wv_y
+
+    // WebView2 インスタンス作成 (debug=1 でDevTools有効)
+    wv2_create id_wv, hwnd, wv_x, wv_y, wv_w, wv_h, 1
+    if id_wv == 0 {
+        dialog "WebView2の初期化に失敗しました。WebView2ランタイムが導入されているか確認してください。", 1, "エラー"
+        end
+    }
+
+    // Web側 (JavaScript) からの通知メッセージ受け取り設定
+    wv2_set_notify id_wv, hwnd, WM_USER_WV2_MSG
+    oncmd gosub *on_web_message, WM_USER_WV2_MSG
+
+    // webのHTMLを表示
+    gosub *cmd_web_html
+
+    // 終了時処理とウィンドウリサイズ処理の登録
+    onexit *on_close
+    stop
+
+// ------------------------------------------------------------------------------
+// webの読み込み
+// ------------------------------------------------------------------------------
+*cmd_web_html
+    wv2_navigate id_wv, "https://hsp.tv/"
+    return
+
+// ------------------------------------------------------------------------------
+// サンプルHTMLの読み込み
+// ------------------------------------------------------------------------------
+*cmd_local_html
+    html_src = {"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <style>
+        body { font-family: 'Meiryo', sans-serif// padding: 20px// background-color: #f7f9fa// }
+        .card { background: white// padding: 20px// border-radius: 8px// box-shadow: 0 2px 4px rgba(0,0,0,0.1)// }
+        button { padding: 8px 16px// font-size: 14px// cursor: pointer// }
+    </style>
+</head>
+<body>
+    <div class='card'>
+        <h2>WebView2 in HSP3 へようこそ</h2>
+        <p>IEコンポーネントから移行し、最新のChromiumエンジンで描画されています。</p>
+        <button onclick='notifyHsp()'>HSP3へメッセージ送信</button>
+    </div>
+    <script>
+        function notifyHsp() {
+            if (window.chrome && window.chrome.webview) {
+                window.chrome.webview.postMessage('Hello from JavaScript in WebView2!')//
+            }
+        }
+        function changeColor(color) {
+            document.body.style.backgroundColor = color//
+        }
+    </script>
+</body>
+</html>
+    "}
+    wv2_set_html id_wv, html_src
+    return
+
+// ------------------------------------------------------------------------------
+// コマンド処理
+// ------------------------------------------------------------------------------
+*cmd_reload
+    wv2_reload id_wv
+    return
+
+*cmd_back
+    // 履歴戻る用のJavaScript実行
+    wv2_eval id_wv, "history.back()//"
+    return
+
+*cmd_forward
+    // 履歴進む用のJavaScript実行
+    wv2_eval id_wv, "history.forward()//"
+    return
+
+*cmd_run_js
+    // HSP3からJavaScriptの関数を呼び出し
+    wv2_eval id_wv, "changeColor('#0099ff')//"
+    return
+
+// ------------------------------------------------------------------------------
+// JavaScript (postMessage) からの通知ハンドラ
+// ------------------------------------------------------------------------------
+*on_web_message
+    sdim recv_msg, 1024
+    wv2_get_message id_wv, recv_msg, 1024
+    dialog "Web側から受信: " + recv_msg, 0, "HSP3 通知"
+    return
+
+// ------------------------------------------------------------------------------
+// 終了時処理
+// ------------------------------------------------------------------------------
+*on_close
+    if id_wv != 0 {
+        wv2_destroy id_wv
+    }
+    end
