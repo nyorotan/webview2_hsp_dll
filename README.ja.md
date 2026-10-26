@@ -19,12 +19,16 @@ HSP3から従来のIEコンポーネント（`axobj`）の代替として利用�
    - HSP3から呼び出すためのインクルードモジュール（Shift-JIS）。
    - `wv2_create`, `wv2_navigate`, `wv2_set_html`, `wv2_eval` などの命令を提供します。
 3. **[sample.hsp](./sample.hsp)**
-   - HTML文字列の流し込み表示、JavaScriptの実行、Web側（`postMessage`）からのイベント受信を行うサンプルコード。
+   - HTML表示、JavaScript連携、Web側通知に加え、独立Markdown DLLを使ったファイル選択・表示のサンプルです。
+4. **[hsp3markdown.as](./hsp3markdown.as) と [markdown_dll](./markdown_dll)**
+   - Markdown変換用の独立DLL `markdown_hsp.dll` とHSP3モジュールです。必要なアプリだけが追加で利用できます。
 
 ### 動作要件
 
 - Windows 10 / 11（Microsoft Edge WebView2 Runtime がインストールされている環境）
 - HSP 3.6 以降
+
+Markdown表示を利用する場合は、[build_markdown.bat](./build_markdown.bat) で `markdown_hsp.dll` を別途ビルドし、[hsp3markdown.as](./hsp3markdown.as) をインクルードします。Marked.js と DOMPurify は [markdown_dll/assets/markdown](./markdown_dll/assets/markdown) からMarkdown DLLに埋め込まれ、実行時に追加のライブラリファイルやネット接続は不要です。[sample.hsp](./sample.hsp) はMarkdownモジュールを利用する例です。
 
 ---
 
@@ -65,6 +69,19 @@ HSP3から従来のIEコンポーネント（`axobj`）の代替として利用�
 | `wv2_reload` | `wv2_reload id` | ページの再読み込み |
 | `wv2_destroy` | `wv2_destroy id` | WebView2インスタンスの破棄 |
 
+#### Markdownモジュール（任意）
+
+```hsp
+#include "hsp3markdown.as"
+
+    md_init
+    if stat == 0 : dialog "Markdown DLL initialization failed.", 1
+    wv2_show_markdown id, "docs\\guide.md"
+    if stat == 0 : dialog "Markdown file could not be displayed.", 1
+```
+
+`hsp3markdown.as` は `hsp3webview2.as` も読み込みます。`wv2_show_markdown` はMarkdownファイルを読み込み、UTF-8 HTMLを生成して既存のWebView2へ渡します。相対画像などはMarkdownファイルの場所を基準に解決します。変換HTMLはDOMPurifyでサニタイズされ、入力ファイルは最大32 MiB、生成HTMLは最大64 MiBです。
+
 > [!NOTE]
 > **識別用ID（`id`）について:**
 > `wv2_create` で取得できる `id` は、Windowsのウィンドウハンドル（`HWND`）ではなく、**本DLLが内部で個々のWebView2を管理するために発行する識別用ID番号（1, 2... の連番整数）** です。
@@ -73,6 +90,7 @@ HSP3から従来のIEコンポーネント（`axobj`）の代替として利用�
 > [!TIP]
 > **文字コード自動判定・変換機能:**
 > HSP3標準の **Shift_JIS（CP932）** と **UTF-8** の両方に対応しています。DLL内部で自動判別し、適切に変換してWebView2へ渡すため、HSP3側で事前に文字コード変換を行う必要はありません。また、Web側（JavaScript）からメッセージを受信した際もShift_JISへ自動変換されて返されます。
+> Markdown DLLはMarkdownファイルのUTF-8（BOM付き含む）とWindowsのシステムコードページに対応します。
 
 ---
 
@@ -109,6 +127,8 @@ go build -buildmode=c-shared -o webview2_hsp.dll
 ```
 
 生成された `webview2_hsp.dll` を [sample.hsp](./sample.hsp) と同じフォルダに配置し、HSP3スクリプトエディタから [sample.hsp](./sample.hsp) を実行して動作をご確認ください。
+
+Markdown機能を使う場合は、別途 `build_markdown.bat` を実行して `markdown_hsp.dll` をビルドし、同じアプリケーションフォルダに配置してください。32bit/64bitはWebView2 DLLおよびHSPランタイムと一致させます。
 
 
 ## ライセンス

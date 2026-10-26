@@ -19,12 +19,16 @@ It supports rendering local HTML, navigating websites, bidirectional communicati
    - HSP3 include module (Shift-JIS encoded).
    - Provides commands such as `wv2_create`, `wv2_navigate`, `wv2_set_html`, and `wv2_eval`.
 3. **[sample.hsp](./sample.hsp)**
-   - Sample script demonstrating local HTML rendering, JavaScript execution, and event reception from the web side via `postMessage`.
+   - Sample script demonstrating local HTML, JavaScript and web messaging, plus file selection and display through the standalone Markdown DLL.
+4. **[hsp3markdown.as](./hsp3markdown.as) and [markdown_dll](./markdown_dll)**
+   - An optional, standalone Markdown conversion DLL (`markdown_hsp.dll`) and its HSP3 module.
 
 ### Requirements
 
 - Windows 10 / 11 (with Microsoft Edge WebView2 Runtime installed)
 - HSP 3.6 or later
+
+To use Markdown rendering, build the separate `markdown_hsp.dll` with [build_markdown.bat](./build_markdown.bat) and include [hsp3markdown.as](./hsp3markdown.as) in the application. Marked.js and DOMPurify are embedded in the Markdown DLL from [markdown_dll/assets/markdown](./markdown_dll/assets/markdown), so no runtime library files or network access are required. [sample.hsp](./sample.hsp) demonstrates this optional module.
 
 ---
 
@@ -65,6 +69,19 @@ It supports rendering local HTML, navigating websites, bidirectional communicati
 | `wv2_reload` | `wv2_reload id` | Reloads the current page. |
 | `wv2_destroy` | `wv2_destroy id` | Destroys the WebView2 instance. |
 
+#### Optional Markdown module
+
+```hsp
+#include "hsp3markdown.as"
+
+    md_init
+    if stat == 0 : dialog "Markdown DLL initialization failed.", 1
+    wv2_show_markdown id, "docs\\guide.md"
+    if stat == 0 : dialog "Markdown file could not be displayed.", 1
+```
+
+`hsp3markdown.as` also includes `hsp3webview2.as`. `wv2_show_markdown` reads a Markdown file, produces UTF-8 HTML, and sends it to the existing WebView2. Relative images and links resolve from the Markdown file's directory. The HTML is sanitized with DOMPurify. Markdown files are limited to 32 MiB and generated HTML to 64 MiB.
+
 > [!NOTE]
 > **About the Instance Identifier (`id`):**
 > The `id` returned by `wv2_create` is an internal sequential integer ID (1, 2, ...) issued by the DLL to manage WebView2 instances, **not a Windows handle (`HWND`)**.
@@ -73,6 +90,7 @@ It supports rendering local HTML, navigating websites, bidirectional communicati
 > [!TIP]
 > **Automatic Character Encoding Detection:**
 > Both **Shift_JIS (CP932)** (HSP3 default) and **UTF-8** strings are supported. The DLL automatically detects the encoding and converts it appropriately for WebView2, eliminating the need for manual conversion in HSP3. Messages received from JavaScript are also automatically converted back to Shift_JIS.
+> The Markdown DLL supports Markdown files encoded as UTF-8 (including BOM) or the Windows system code page.
 
 ---
 
@@ -109,6 +127,8 @@ go build -buildmode=c-shared -o webview2_hsp.dll
 ```
 
 Place the generated `webview2_hsp.dll` in the same directory as [sample.hsp](./sample.hsp), and run [sample.hsp](./sample.hsp) from the HSP3 Script Editor to test it.
+
+To use Markdown support, separately run `build_markdown.bat` to build `markdown_hsp.dll` and place it beside the application. Match its architecture to the WebView2 DLL and HSP runtime.
 
 ## License
 
