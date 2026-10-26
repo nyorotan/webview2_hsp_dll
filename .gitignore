@@ -2,6 +2,7 @@
 *.exe
 *.exe~
 *.so
+*.dll
 *.dylib
 
 # テスト関連
