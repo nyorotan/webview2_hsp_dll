@@ -5,7 +5,6 @@
 // ==============================================================================
 #packopt name "WebView2_sample"
 #include "hsp3webview2.as"
-#include "hsp3markdown.as"
 
 #define WM_USER_WV2_MSG 0x8001
 
@@ -19,8 +18,6 @@
     pos 200, 10 : button gosub "再読込", *cmd_reload
     pos 295, 10 : button gosub "ローカルHTML", *cmd_local_html
     pos 390, 10 : button gosub "JS実行", *cmd_run_js
-    objsize 130, 26
-    pos 485, 10 : button gosub "Open Markdown", *cmd_open_markdown
 
     // WebView2 の配置領域 (上部ツールバー45pxを除いた領域)
     wv_x = 0
@@ -32,12 +29,6 @@
     wv2_create id_wv, hwnd, wv_x, wv_y, wv_w, wv_h, 1
     if id_wv == 0 {
         dialog "WebView2の初期化に失敗しました。WebView2ランタイムが導入されているか確認してください。", 1, "エラー"
-        end
-    }
-    wv2_markdown_init id_wv
-    if stat == 0 {
-        dialog "Markdown initialization failed.", 1, "Error"
-        wv2_destroy id_wv
         end
     }
 
@@ -94,18 +85,6 @@
 </html>
     "}
     wv2_set_html id_wv, html_src
-    return
-
-*cmd_open_markdown
-    dialog "md", 16, "Open Markdown"
-    if stat == 0 {
-        return
-    }
-    selected_markdown = refstr
-    wv2_show_markdown id_wv, selected_markdown
-    if stat == 0 {
-        dialog "Failed to open Markdown file.", 1, "Error"
-    }
     return
 
 // ------------------------------------------------------------------------------
