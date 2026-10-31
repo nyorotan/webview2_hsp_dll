@@ -46,10 +46,10 @@ func cStrToUTF8String(cstr *C.char) string {
 }
 
 var (
-	kernel32                   = windows.NewLazySystemDLL("kernel32.dll")
-	procWideCharToMultiByte    = kernel32.NewProc("WideCharToMultiByte")
-	user32                     = windows.NewLazySystemDLL("user32.dll")
-	procPostMessageW           = user32.NewProc("PostMessageW")
+	kernel32                = windows.NewLazySystemDLL("kernel32.dll")
+	procWideCharToMultiByte = kernel32.NewProc("WideCharToMultiByte")
+	user32                  = windows.NewLazySystemDLL("user32.dll")
+	procPostMessageW        = user32.NewProc("PostMessageW")
 )
 
 // UTF-8文字列をShift_JIS(CP932)バイト列に変換します
@@ -92,6 +92,8 @@ type rect struct {
 type WebviewInstance struct {
 	chromium    *edge.Chromium
 	hwnd        uintptr
+	currentHTML string
+	isHTML      bool
 	lastMessage string
 	notifyHwnd  uintptr
 	notifyMsg   uint32
@@ -259,6 +261,10 @@ func WV2_Navigate(id C.uintptr_t, url *C.char) C.int {
 	if inst == nil || inst.chromium == nil || url == nil {
 		return 0
 	}
+	inst.mu.Lock()
+	inst.currentHTML = ""
+	inst.isHTML = false
+	inst.mu.Unlock()
 	inst.chromium.Navigate(cStrToUTF8String(url))
 	return 1
 }
@@ -271,7 +277,12 @@ func WV2_NavigateToString(id C.uintptr_t, htmlContent *C.char) C.int {
 	if inst == nil || inst.chromium == nil || htmlContent == nil {
 		return 0
 	}
-	inst.chromium.NavigateToString(cStrToUTF8String(htmlContent))
+	content := cStrToUTF8String(htmlContent)
+	inst.mu.Lock()
+	inst.currentHTML = content
+	inst.isHTML = true
+	inst.mu.Unlock()
+	inst.chromium.NavigateToString(content)
 	return 1
 }
 
@@ -307,7 +318,14 @@ func WV2_Reload(id C.uintptr_t) C.int {
 	if inst == nil || inst.chromium == nil {
 		return 0
 	}
-	// JavaScript経由でリロードを実行
+	inst.mu.Lock()
+	currentHTML := inst.currentHTML
+	isHTML := inst.isHTML
+	inst.mu.Unlock()
+	if isHTML {
+		inst.chromium.NavigateToString(currentHTML)
+		return 1
+	}
 	inst.chromium.Eval("window.location.reload();")
 	return 1
 }

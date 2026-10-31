@@ -119,5 +119,5 @@ go build -buildmode=c-shared -o webview2_hsp.dll
 
 ## バージョン情報
 
-- **バージョン**: v1.0.0
+- **バージョン**: v1.0.1
 - **作者**: nyorotan

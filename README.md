@@ -118,5 +118,5 @@ This project is released under the `MIT License`. Feel free to use it for both c
 
 ## Version Information
 
-- **Version**: v1.0.0
+- **Version**: v1.0.1
 - **Author**: nyorotan
